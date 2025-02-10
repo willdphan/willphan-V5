@@ -16,11 +16,14 @@ interface ProjectSliderProps {
 
 export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isTransitioningOut, setIsTransitioningOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [videoLoaded, setVideoLoaded] = useState<{ [key: string]: boolean }>(
     {},
   );
+
+  const router = useRouter();
 
   // Add debug logging
   useEffect(() => {
@@ -31,21 +34,6 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
     console.log("ProjectSlider mounted with", posts.length, "posts");
     console.log("First post:", posts[0]);
   }, [posts]);
-
-  // Handle video playback when active slide changes
-  useEffect(() => {
-    const activeProject = getProjectAtIndex(activeIndex);
-    if (activeProject?.media?.video) {
-      console.log("Active slide changed to:", activeProject.title);
-      // Find the video element and try to play it
-      const video = document.querySelector(
-        `video[src="${activeProject.media.video}"]`,
-      ) as HTMLVideoElement;
-      if (video) {
-        video.play().catch((e) => console.error("Failed to play video:", e));
-      }
-    }
-  }, [activeIndex]);
 
   // Base projects that we'll repeat infinitely
   const baseProjects = posts;
@@ -75,7 +63,19 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
   };
 
   const handleClick = (index: number) => {
-    setActiveIndex(index);
+    const project = getProjectAtIndex(index);
+
+    if (index === activeIndex) {
+      // Trigger exit animation before navigation
+      if (project.slug) {
+        setIsTransitioningOut(true);
+        setTimeout(() => {
+          router.push(`/examples/${project.slug}`);
+        }, 700); // Match the transition duration
+      }
+    } else {
+      setActiveIndex(index);
+    }
   };
 
   useEffect(() => {
@@ -90,6 +90,19 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Add effect to control video playback
+  useEffect(() => {
+    const videos = document.querySelectorAll("video");
+    videos.forEach((video) => {
+      if (video.closest(`[data-index="${activeIndex}"]`)) {
+        video.play().catch((e) => console.log("Video play error:", e));
+      } else {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+  }, [activeIndex]);
+
   const getSlideWidth = (distance: number) => {
     if (distance === 0) return (600 / containerWidth) * 100;
     if (Math.abs(distance) === 1) return 20;
@@ -99,11 +112,10 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
     return 5;
   };
 
-  // Calculate absolute position of each slide
+  // Modify getSlidePosition to handle exit animation
   const getSlidePosition = (index: number) => {
-    // Guard against division by zero
     if (!containerWidth) {
-      return 0; // Return 0 if containerWidth is not yet available
+      return 0;
     }
 
     const indexDiff = index - activeIndex;
@@ -112,6 +124,24 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
       containerWidth / 2 - (containerWidth * activeWidthPercent) / 100 / 2;
     let position = centerPosition;
 
+    // During exit animation, collapse slides from both sides towards the center
+    if (isTransitioningOut) {
+      const absoluteCenter = containerWidth / 2;
+      if (indexDiff === 0) {
+        return absoluteCenter - (containerWidth * activeWidthPercent) / 100 / 2; // Center the active slide
+      }
+
+      // Calculate collapse position based on which side the slide is on
+      if (indexDiff < 0) {
+        // Slides on the left move right
+        return absoluteCenter - 100 + Math.abs(indexDiff) * 5;
+      } else {
+        // Slides on the right move left
+        return absoluteCenter + 100 - indexDiff * 5;
+      }
+    }
+
+    // Normal positioning logic for non-transitioning state
     if (indexDiff < 0) {
       let accumulatedWidth = 0;
       for (let i = -1; i >= indexDiff; i--) {
@@ -125,12 +155,11 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
       }
     }
 
-    // Ensure we return a valid number
     return isNaN(position) ? 0 : position;
   };
 
   return (
-    <div className="w-full absolute flex items-center justify-center py-20">
+    <div className="w-full absolute flex flex-col items-center justify-center py-20">
       <div ref={containerRef} className="relative w-full h-[400px]">
         {getVisibleIndices().map((index) => {
           const project = getProjectAtIndex(index);
@@ -144,15 +173,20 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
           return (
             <div
               key={index}
+              data-index={index}
               className={cn(
                 "absolute top-1/2 -translate-y-1/2 cursor-pointer",
-                "transition-all duration-200 ease-out h-[360px]",
+                "transition-all duration-700 cubic-bezier(0.05, 0.7, 0.1, 1.0) h-[360px]",
               )}
               style={{
                 left: position,
                 width: `${getSlideWidth(distance)}%`,
                 zIndex: isActive ? 10 : Math.abs(distance),
-                opacity: Math.max(1 - Math.abs(distance) / 10, 0.05),
+                opacity: isTransitioningOut
+                  ? isActive
+                    ? 1
+                    : 0
+                  : Math.max(1 - Math.abs(distance) / 10, 0.05),
               }}
               onClick={() => handleClick(index)}
             >
@@ -166,7 +200,7 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
                   <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
                     <video
                       src={project.media?.video}
-                      autoPlay
+                      autoPlay={isActive}
                       loop
                       muted
                       playsInline
@@ -197,6 +231,23 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
             </div>
           );
         })}
+      </div>
+
+      {/* Project details below carousel */}
+      <div className="mt-0 w-full max-w-[600px]">
+        <div className="flex justify-between items-center w-full">
+          <p className="font-[400] tracking-widest pt-4 text-[12px] uppercase leading-none">
+            {getProjectAtIndex(activeIndex)?.title}
+          </p>
+          <p className="font-[400] tracking-widest pt-4 text-[12px] uppercase leading-none text-[#6A6A72]">
+            {getProjectAtIndex(activeIndex)?.time?.created}
+          </p>
+        </div>
+        <div className="flex justify-between items-center w-full">
+          <p className="pt-1 font-[400] text-[#6A6A72] uppercase tracking-widest text-[12px] leading-normal">
+            {getProjectAtIndex(activeIndex)?.summary}
+          </p>
+        </div>
       </div>
     </div>
   );

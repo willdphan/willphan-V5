@@ -38,9 +38,9 @@ export default function Home() {
         <Posts category="examples" />
       </FadeIn.Item> */}
       <Spacer />
-      <FadeIn.Item>
+      {/* <FadeIn.Item>
         <Footer />
-      </FadeIn.Item>
+      </FadeIn.Item> */}
       {/* <DeployButton /> */}
     </FadeIn.Container>
   );
