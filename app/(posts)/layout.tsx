@@ -5,7 +5,7 @@ import React from "react";
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <React.Fragment>
-      <Breadcrumb />
+      {/* <Breadcrumb /> */}
       {children}
     </React.Fragment>
   );

@@ -10,6 +10,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useTransitionOut } from "../screens/home";
+
 interface ProjectSliderProps {
   posts: Post[];
 }
@@ -24,6 +26,9 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
   );
 
   const router = useRouter();
+
+  // Add the transition hook
+  const isPageTransitioningOut = useTransitionOut();
 
   // Add debug logging
   useEffect(() => {
@@ -69,6 +74,8 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
       // Trigger exit animation before navigation
       if (project.slug) {
         setIsTransitioningOut(true);
+        // Dispatch custom event for text animation on home.tsx page
+        window.dispatchEvent(new Event("projectSelected"));
         setTimeout(() => {
           router.push(`/examples/${project.slug}`);
         }, 700); // Match the transition duration
@@ -159,7 +166,7 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
   };
 
   return (
-    <div className="w-full absolute flex flex-col items-center justify-center py-20">
+    <div className="w-full flex flex-col items-center justify-center gap-4">
       <div ref={containerRef} className="relative w-full h-[400px]">
         {getVisibleIndices().map((index) => {
           const project = getProjectAtIndex(index);
@@ -234,7 +241,15 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
       </div>
 
       {/* Project details below carousel */}
-      <div className="mt-0 w-full max-w-[600px]">
+      <div
+        className={cn(
+          "mt-0 w-full max-w-[600px]",
+          "transform transition-all duration-700",
+          isTransitioningOut || isPageTransitioningOut
+            ? "-translate-y-32 opacity-0"
+            : "translate-y-0 opacity-100",
+        )}
+      >
         <div className="flex justify-between items-center w-full">
           <p className="font-[400] tracking-widest pt-4 text-[12px] uppercase leading-none">
             {getProjectAtIndex(activeIndex)?.title}
