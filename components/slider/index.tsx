@@ -158,7 +158,7 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
             >
               <div
                 className={cn(
-                  "w-full h-full border border-border",
+                  "w-full h-full border-transparent border-2",
                   "overflow-hidden relative",
                 )}
               >
@@ -170,7 +170,10 @@ export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
                       loop
                       muted
                       playsInline
-                      className="w-full h-full object-cover"
+                      className={cn(
+                        "w-full h-full object-cover transition-all duration-700",
+                        !isActive && "grayscale brightness-50",
+                      )}
                     />
                   </div>
                 ) : hasImage ? (
