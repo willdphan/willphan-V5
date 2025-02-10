@@ -43,3 +43,8 @@ To get started with Sylph, check out the [Guides](https://next-sylph-portfolio.v
 ## Sponsor
 
 If you find this project helpful, consider supporting the project. Your contribution helps maintain the project and supports future development.
+
+TODO:
+
+- [ ] Add video that persists across page transitions, perhaps a shared state
+- [ ] styling
