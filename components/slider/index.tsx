@@ -1,103 +1,97 @@
 "use client";
 
-import { cn } from "@/lib/cn";
+import type { Post } from "@/types/post";
 
+import { cn } from "@/lib/cn";
+import { formatter } from "@/lib/formatter";
+
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-interface Project {
-  id: number;
-  image: string;
-  date: string;
-  title: string;
-  subtitle: string;
+interface ProjectSliderProps {
+  posts: Post[];
 }
 
-const dummyProjects: Project[] = [
-  {
-    id: 1,
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/CleanShot%202025-02-08%20at%2023.42.13-mFYORPVGUC76j2bFjhxwa4mMCcz5iX.png",
-    date: "04.12",
-    title: "Clutch",
-    subtitle: "2022",
-  },
-  {
-    id: 2,
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/CleanShot%202025-02-08%20at%2023.42.13-mFYORPVGUC76j2bFjhxwa4mMCcz5iX.png",
-    date: "04.12",
-    title: "Project 2",
-    subtitle: "2022",
-  },
-  {
-    id: 3,
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/CleanShot%202025-02-08%20at%2023.42.13-mFYORPVGUC76j2bFjhxwa4mMCcz5iX.png",
-    date: "04.12",
-    title: "Project 3",
-    subtitle: "2022",
-  },
-  {
-    id: 4,
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/CleanShot%202025-02-08%20at%2023.42.13-mFYORPVGUC76j2bFjhxwa4mMCcz5iX.png",
-    date: "04.12",
-    title: "Project 4",
-    subtitle: "2022",
-  },
-  {
-    id: 5,
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/CleanShot%202025-02-08%20at%2023.42.13-mFYORPVGUC76j2bFjhxwa4mMCcz5iX.png",
-    date: "04.12",
-    title: "Project 5",
-    subtitle: "2022",
-  },
-];
-
-const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF"];
-
-export const ProjectSlider = () => {
-  const [activeIndex, setActiveIndex] = useState(2);
-  const [direction, setDirection] = useState<"left" | "right" | null>(null);
+export const ProjectSlider = ({ posts = [] }: ProjectSliderProps) => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState<{ [key: string]: boolean }>(
+    {},
+  );
 
-  // Create a circular array by repeating the projects many times
-  const repeatedProjects = Array(10).fill(dummyProjects).flat();
-  const offset = Math.floor(repeatedProjects.length / 2);
+  // Add debug logging
+  useEffect(() => {
+    if (!posts || posts.length === 0) {
+      console.warn("ProjectSlider received empty posts array");
+      return;
+    }
+    console.log("ProjectSlider mounted with", posts.length, "posts");
+    console.log("First post:", posts[0]);
+  }, [posts]);
+
+  // Handle video playback when active slide changes
+  useEffect(() => {
+    const activeProject = getProjectAtIndex(activeIndex);
+    if (activeProject?.media?.video) {
+      console.log("Active slide changed to:", activeProject.title);
+      // Find the video element and try to play it
+      const video = document.querySelector(
+        `video[src="${activeProject.media.video}"]`,
+      ) as HTMLVideoElement;
+      if (video) {
+        video.play().catch((e) => console.error("Failed to play video:", e));
+      }
+    }
+  }, [activeIndex]);
+
+  // Base projects that we'll repeat infinitely
+  const baseProjects = posts;
+
+  // Validate that we have projects before rendering
+  if (!posts || posts.length === 0) {
+    console.warn("No projects available to display");
+    return null;
+  }
+
+  // Helper to get project at any index (positive or negative)
+  const getProjectAtIndex = (index: number): Post => {
+    if (!baseProjects || baseProjects.length === 0) return {} as Post;
+    const normalizedIndex =
+      ((index % baseProjects.length) + baseProjects.length) %
+      baseProjects.length;
+    return baseProjects[normalizedIndex];
+  };
+
+  // Get visible range of indices centered around activeIndex
+  const getVisibleIndices = () => {
+    const range = 10; // number of slides visible on each side
+    return Array.from(
+      { length: range * 2 + 1 },
+      (_, i) => activeIndex - range + i,
+    );
+  };
+
+  const handleClick = (index: number) => {
+    setActiveIndex(index);
+  };
 
   useEffect(() => {
-    if (containerRef.current) {
-      setContainerWidth(containerRef.current.offsetWidth);
-    }
-
     const handleResize = () => {
       if (containerRef.current) {
         setContainerWidth(containerRef.current.offsetWidth);
       }
     };
 
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleClick = (index: number) => {
-    const newDirection = index > activeIndex ? "right" : "left";
-    setDirection(newDirection);
-    setActiveIndex(index);
-  };
-
-  useEffect(() => {
-    if (direction === "right" && activeIndex >= repeatedProjects.length - 2) {
-      setActiveIndex(offset);
-    } else if (direction === "left" && activeIndex <= 2) {
-      setActiveIndex(repeatedProjects.length - offset);
-    }
-  }, [activeIndex, direction, offset, repeatedProjects.length]);
-
   const getSlideWidth = (distance: number) => {
-    if (distance === 0) return (600 / containerWidth) * 100; // Convert 576px (w-xl) to percentage of container width
+    if (distance === 0) return (600 / containerWidth) * 100;
     if (Math.abs(distance) === 1) return 20;
     if (Math.abs(distance) === 2) return 15;
     if (Math.abs(distance) === 3) return 10;
@@ -105,7 +99,13 @@ export const ProjectSlider = () => {
     return 5;
   };
 
+  // Calculate absolute position of each slide
   const getSlidePosition = (index: number) => {
+    // Guard against division by zero
+    if (!containerWidth) {
+      return 0; // Return 0 if containerWidth is not yet available
+    }
+
     const indexDiff = index - activeIndex;
     const activeWidthPercent = (600 / containerWidth) * 100;
     const centerPosition =
@@ -124,48 +124,72 @@ export const ProjectSlider = () => {
         position += (containerWidth * getSlideWidth(i)) / 100;
       }
     }
-    return position;
+
+    // Ensure we return a valid number
+    return isNaN(position) ? 0 : position;
   };
 
   return (
     <div className="w-full absolute flex items-center justify-center py-20">
       <div ref={containerRef} className="relative w-full h-[400px]">
-        {repeatedProjects.map((project, index) => {
+        {getVisibleIndices().map((index) => {
+          const project = getProjectAtIndex(index);
           const isActive = index === activeIndex;
           const distance = index - activeIndex;
           const position = getSlidePosition(index);
-          const isVisible = Math.abs(distance) < 20;
 
-          if (!isVisible) return null;
+          const hasVideo = project?.media?.video && project.media.video !== "";
+          const hasImage = project?.media?.image && project.media.image !== "";
 
           return (
             <div
               key={index}
               className={cn(
                 "absolute top-1/2 -translate-y-1/2 cursor-pointer",
-                "transition-all duration-200 ease-out h-[400px]",
+                "transition-all duration-200 ease-out h-[360px]",
               )}
               style={{
                 left: position,
                 width: `${getSlideWidth(distance)}%`,
                 zIndex: isActive ? 10 : Math.abs(distance),
-                opacity: Math.max(1 - Math.abs(distance) / 10, 0.3),
+                opacity: Math.max(1 - Math.abs(distance) / 10, 0.05),
               }}
               onClick={() => handleClick(index)}
             >
               <div
                 className={cn(
-                  "w-full h-full bg-background",
+                  "w-full h-full border border-border",
                   "overflow-hidden relative",
                 )}
               >
-                <div
-                  className={cn(
-                    "absolute inset-0 bg-cover bg-center transition-all duration-700",
-                    !isActive && "grayscale brightness-50",
-                  )}
-                  style={{ backgroundImage: `url(${project.image})` }}
-                />
+                {hasVideo ? (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black">
+                    <video
+                      src={project.media?.video}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : hasImage ? (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={project?.media?.image || ""}
+                      alt={project?.title || ""}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className={cn(
+                        "object-cover transition-all duration-700",
+                        !isActive && "grayscale brightness-50",
+                      )}
+                      priority={isActive}
+                    />
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-background" />
+                )}
               </div>
             </div>
           );

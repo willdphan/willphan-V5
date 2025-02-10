@@ -2,7 +2,7 @@ import { DeployButton } from "@/components/deploy";
 import { Footer } from "@/components/footer";
 import * as FadeIn from "@/components/motion/staggers/fade";
 import { Posts } from "@/components/posts";
-import { ProjectSlider } from "@/components/slider";
+import { ProjectSliderServer } from "@/components/slider/server";
 
 const Spacer = () => <div style={{ marginTop: "24px" }} />;
 
@@ -29,19 +29,19 @@ export default function Home() {
         </p>
       </FadeIn.Item>
       <FadeIn.Item>
-        <ProjectSlider />
+        <ProjectSliderServer />
       </FadeIn.Item>
-      <FadeIn.Item>
+      {/* <FadeIn.Item>
         <Posts category="guides" />
       </FadeIn.Item>
       <FadeIn.Item>
         <Posts category="examples" />
-      </FadeIn.Item>
+      </FadeIn.Item> */}
       <Spacer />
       <FadeIn.Item>
         <Footer />
       </FadeIn.Item>
-      <DeployButton />
+      {/* <DeployButton /> */}
     </FadeIn.Container>
   );
 }
