@@ -16,7 +16,7 @@ const projects: Post[] = [
       updated: "2024-09-01",
     },
     media: {
-      image: "/images/navi-display.jpg",
+      image: "/assets/navi-display.jpg",
       video: "",
     },
     author: {
@@ -89,7 +89,7 @@ const projects: Post[] = [
       updated: "2024-05-01",
     },
     media: {
-      image: "/images/silk-display.png",
+      image: "/assets/silk-02-display.jpeg",
     },
     related: {
       links: ["https://github.com/willdphan/silk-02"],
@@ -127,7 +127,7 @@ const projects: Post[] = [
       updated: "2024-01-01",
     },
     media: {
-      image: "/images/char-01-display.png",
+      image: "/assets/char-01-display.png",
     },
     related: {
       links: ["https://github.com/willdphan/char-01.git"],
